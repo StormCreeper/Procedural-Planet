@@ -24,7 +24,7 @@ GLuint g_program {};  // A GPU program contains at least a vertex shader and a f
 
 Camera g_camera {};
 
-std::shared_ptr<Object3D> g_plane {};
+std::shared_ptr<Object3D> g_mesh {};
 
 // Executed each time the window is resized. Adjust the aspect ratio and the rendering viewport to the current window.
 void windowSizeCallback(GLFWwindow *window, int width, int height) {
@@ -121,7 +121,7 @@ void initGPUprogram() {
 
 void initCPUgeometry() {
     std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    g_plane = std::make_shared<Object3D>(Mesh::genPlane(), texture);
+    g_mesh = std::make_shared<Object3D>(Mesh::genSphere(16), texture);
 }
 
 void initCamera() {
@@ -170,18 +170,28 @@ void render() {
 
     // Render objects
 
-    float height = sin(glfwGetTime()) * 0.5f + 0.5f;
+    // Render one shell
+    /*float height = 0;
     setUniform(g_program, "u_height", height);
-    g_plane->render(g_program);
+    g_plane->render(g_program);*/
+
+    int nbShells = 256;
+    float heightMax = 1.0f;
+
+    for (int i = 0; i < nbShells; i++) {
+        float height = heightMax * (float)i / (float)(nbShells-1);
+        setUniform(g_program, "u_height", height);
+        g_mesh->render(g_program);
+    }
 }
 
 // Update any accessible variable based on the current time
 void update(const float currentTimeInSec) {
 
-    glm::vec3 targetPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 targetPosition = glm::vec3(0.05f, 0.05f, 0.0f);
     g_camera.setTarget(targetPosition);
 
-    glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 1.0f, sin(g_cameraAngleX))) * g_cameraDistance;
+    glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 0.5f, sin(g_cameraAngleX))) * g_cameraDistance;
     g_camera.setPosition(targetPosition + cameraOffset);
 }
 

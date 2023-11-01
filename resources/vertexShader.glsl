@@ -18,8 +18,8 @@ out vec3 worldPos;
 out vec2 textureUV;
 
 void main() {
-	float heightFactor = 1.0f;
-	gl_Position =  u_projMat * u_viewMat * u_modelMat * vec4(vPosition + u_height * heightFactor * vertexNormal, 1.0);
+	float heightFactor = 0.3f;
+	gl_Position =  u_projMat * u_viewMat * u_modelMat * vec4(vPosition + u_height * heightFactor * vNormal, 1.0);
 	
 	vec4 worldPos_Homo = u_modelMat * vec4(vPosition, 1.0);
 	worldPos = worldPos_Homo.xyz / worldPos_Homo.w;
