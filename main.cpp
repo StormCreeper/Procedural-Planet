@@ -16,7 +16,6 @@
 
 #define _MY_OPENGL_IS_33_
 
-
 // Window parameters
 GLFWwindow *g_window {};
 
@@ -24,6 +23,8 @@ GLFWwindow *g_window {};
 GLuint g_program {};  // A GPU program contains at least a vertex shader and a fragment shader
 
 Camera g_camera {};
+
+std::shared_ptr<Object3D> g_plane {};
 
 // Executed each time the window is resized. Adjust the aspect ratio and the rendering viewport to the current window.
 void windowSizeCallback(GLFWwindow *window, int width, int height) {
@@ -55,7 +56,7 @@ void scrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
     g_cameraDistance -= yoffset * 0.1f;
     g_cameraDistance = std::max(g_cameraDistance, 0.1f);
 
-    g_cameraAngleX -= xoffset * 0.01f;
+    g_cameraAngleX -= xoffset * 0.04f;
 }
 
 void errorCallback(int error, const char *desc) {
@@ -119,7 +120,8 @@ void initGPUprogram() {
 
 
 void initCPUgeometry() {
-
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>();
+    g_plane = std::make_shared<Object3D>(Mesh::genPlane(), texture);
 }
 
 void initCamera() {
@@ -158,8 +160,6 @@ void render() {
     const glm::mat4 projMatrix = g_camera.computeProjectionMatrix();
 
     glUseProgram(g_program);
-
-    // We will render 3 sphere : sun, earth and moon
     
     setUniform(g_program, "u_viewMat", viewMatrix);
     setUniform(g_program, "u_projMat", projMatrix);
@@ -169,22 +169,24 @@ void render() {
     setUniform(g_program, "u_texture", 0);
 
     // Render objects
-    
+
+    float height = sin(glfwGetTime()) * 0.5f + 0.5f;
+    setUniform(g_program, "u_height", height);
+    g_plane->render(g_program);
 }
 
 // Update any accessible variable based on the current time
 void update(const float currentTimeInSec) {
 
-    // Get the position of the target object in world space
     glm::vec3 targetPosition = glm::vec3(0.0f, 0.0f, 0.0f);
     g_camera.setTarget(targetPosition);
 
-    glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 0.5f, sin(g_cameraAngleX))) * g_cameraDistance;
+    glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 1.0f, sin(g_cameraAngleX))) * g_cameraDistance;
     g_camera.setPosition(targetPosition + cameraOffset);
 }
 
 int main(int argc, char **argv) {
-    init();  // Your initialization code (user interface, OpenGL states, scene with geometry, material, lights, etc)
+    init();
     while (!glfwWindowShouldClose(g_window)) {
         update(static_cast<float>(glfwGetTime()));
         render();
