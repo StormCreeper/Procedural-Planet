@@ -121,7 +121,8 @@ void initGPUprogram() {
 
 void initCPUgeometry() {
     std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    g_mesh = std::make_shared<Object3D>(Mesh::genSphere(16), texture);
+    //g_mesh = std::make_shared<Object3D>(Mesh::genPlane(), texture);
+    g_mesh = std::make_shared<Object3D>(Mesh::genSphere(64), texture);
 }
 
 void initCamera() {
@@ -168,14 +169,11 @@ void render() {
 
     setUniform(g_program, "u_texture", 0);
 
+    setUniform(g_program, "u_time", static_cast<float>(glfwGetTime()));
+
     // Render objects
 
-    // Render one shell
-    /*float height = 0;
-    setUniform(g_program, "u_height", height);
-    g_plane->render(g_program);*/
-
-    int nbShells = 256;
+    int nbShells = 128;
     float heightMax = 1.0f;
 
     for (int i = 0; i < nbShells; i++) {
@@ -191,7 +189,7 @@ void update(const float currentTimeInSec) {
     glm::vec3 targetPosition = glm::vec3(0.05f, 0.05f, 0.0f);
     g_camera.setTarget(targetPosition);
 
-    glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 0.5f, sin(g_cameraAngleX))) * g_cameraDistance;
+    glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 0.3f, sin(g_cameraAngleX))) * (1.1f + g_cameraDistance);
     g_camera.setPosition(targetPosition + cameraOffset);
 }
 
