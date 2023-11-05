@@ -55,6 +55,9 @@ target_link_libraries(${PROJECT_NAME} glfw)
 add_subdirectory(dep/glm)
 target_link_libraries(${PROJECT_NAME} glm)
 
+add_subdirectory(dep/imgui)
+target_link_libraries(${PROJECT_NAME} IMGUI)
+
 target_link_libraries(${PROJECT_NAME} ${CMAKE_DL_LIBS})
 
 # Create a custom target to copy resources to the build directory (Added by Telo PHILIPPE)

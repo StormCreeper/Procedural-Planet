@@ -159,9 +159,31 @@ vec3 getBumpMappedNormal() {
 	return tnormal;
 }
 
+struct texturingParams {
+    vec3 groundColor;
+    vec3 sandColor;
+    vec3 waterColor;
 
-float treeDensity = 100;
-float grassDensity = 2000;
+	vec3 treeColor;
+	vec3 trunkColor;
+	vec3 grassColor;
+
+    int treeDensity;
+    int grassDensity;
+};
+
+uniform texturingParams u_texturingParams;
+
+float treeDensity = u_texturingParams.treeDensity;
+float grassDensity = u_texturingParams.grassDensity;
+
+vec3 groundColor = u_texturingParams.groundColor;
+vec3 sandColor = u_texturingParams.sandColor;
+vec3 waterColor = u_texturingParams.waterColor;
+
+vec3 treeColor = u_texturingParams.treeColor;
+vec3 trunkColor = u_texturingParams.trunkColor;
+vec3 grassColor = u_texturingParams.grassColor;
 
 struct Material {
 	bool filled;
@@ -181,23 +203,25 @@ void getTreeMaterial(inout Material material) {
 	float treeHeight = rand2D(seed + ivec2(1, 1)) * 0.7f + 0.3f;
 	
 	float radius = 0.2f;
-	material.color = vec3(0.5f, 0.3f, 0.0f) * u_height;
 	float truncHeight = 0.7f * treeHeight;
 	if(u_height > truncHeight) {
 		radius = sin((u_height - truncHeight) / (treeHeight - truncHeight)  * 3.1415f);
-		material.color = vec3(0.2f, 0.7f, 0.1f) * u_height;
 	}
-
 	if(dist < radius && u_height < treeHeight) {
 		material.filled = true;
+
+		material.color = trunkColor * u_height;
+		if(u_height > truncHeight) {
+			material.color = treeColor * u_height;
+		}
 	}
 }
 
-float grassHeightFactor = 1.0f / 4.0f;
+float grassHeightFactor = 1.0f / 5.0f;
 
 void getGrassMaterial(inout Material material) {
 	ivec2 seed = ivec2(textureUV * grassDensity);
-	float val = rand2D(seed) * grassHeightFactor;
+	float val = rand2D(seed) * grassHeightFactor * min(abs(worldHeight - 0.15f) / 0.15f, 1.0f);
 	float grassVal = rand2D(seed + ivec2(1, 1));
 
 	float forest = pow(snoise(vec3(ivec2(textureUV * treeDensity) / treeDensity, 0.0f) * 5.0f), 0.5f);
@@ -224,17 +248,44 @@ void getGrassMaterial(inout Material material) {
 
 	if(u_height < val && dist < radius) {
 		material.filled = true;
-		material.color = vec3(0.0f, 1.0f, 0.0f) * u_height / grassHeightFactor;
+		material.color = grassColor * u_height / grassHeightFactor;
 	}
 }
 
 void getSurfaceMaterial(inout Material material) {
-	if(u_height == 0.0f) { // Ground
-		material.filled = true;
-		material.color = vec3(0.2f, 0.15f, 0.05f);
+	if(worldHeight <= 0.01f) { // Is water
+		if(u_height == 0.0f) { // First layer
+			material.filled = true;
+			material.color = waterColor;
+
+			vec3 viewDir = normalize(u_cameraPosition - worldPos);
+			
+			vec3 tnormal = getBumpMappedNormal();
+
+			vec3 reflectDir = reflect(lightDir, tnormal);
+			float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32.0f);
+			material.color += vec3(0.5f, 0.5f, 0.5f) * spec * 3.0f;
+
+		} else {
+			material.filled = false;
+		}
+
+	} else if (worldHeight <= 0.15f) { // Sand
+		if(u_height == 0.0f) { // First layer
+			material.filled = true;
+			material.color = mix(groundColor, sandColor, min(abs(worldHeight - 0.15f) / 0.15f, 1.0f));
+
+		} else {
+			material.filled = false;
+		}
 	} else {
-		getGrassMaterial(material);
-		getTreeMaterial(material);
+		if(u_height == 0.0f) { // Ground
+			material.filled = true;
+			material.color = groundColor;
+		} else {
+			getGrassMaterial(material);
+			getTreeMaterial(material);
+		}
 	}
 }
 

@@ -36,7 +36,7 @@ class Camera {
     glm::vec3 m_target = glm::vec3(0, 0, 0);
     float m_fov = 90.f;         // Field of view, in degrees
     float m_aspectRatio = 1.f;  // Ratio between the width and the height of the image
-    float m_near = 0.01f;        // Distance before which geometry is excluded from the rasterization process
+    float m_near = 0.001f;        // Distance before which geometry is excluded from the rasterization process
     float m_far = 100.f;         // Distance after which the geometry is excluded from the rasterization process
 };
 

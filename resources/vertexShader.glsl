@@ -91,21 +91,47 @@ out vec2 textureUV;
 
 out float worldHeight;
 
+struct GenerationParams {
+	float heightFactor;
+	float terrainHeightFactor;
+
+	int nOctaves;
+	float terrainScale;
+	float terrainHeightOffset;
+};
+
+uniform GenerationParams u_generationParams;
+
+float heightFactor = u_generationParams.heightFactor; // 0.3f
+float terrainHeightFactor = u_generationParams.terrainHeightFactor; // 0.2f
+
+int nOctaves = u_generationParams.nOctaves;
+float terrainScale = u_generationParams.terrainScale; // 1.0f
+float terrainHeightOffset = u_generationParams.terrainHeightOffset; // 0.1f
+
 float getBaseHeight(vec3 position) {
-	return snoise(position * 1.0f) + 0.4f;
+	float height = 0.0f;
+	float frequency = terrainScale;
+	float amplitude = 1.0f;
+
+	for (int i = 0; i < nOctaves; i++) {
+		height += snoise(position * frequency) * amplitude;
+		frequency *= 2.0f;
+		amplitude *= 0.5f;
+	}
+
+	return height + terrainHeightOffset;
 }
 
 float computeTerrainHeight(vec3 position) {
 	float height = getBaseHeight(position);
-	height = max(0.3f, height);
+	height = max(0.0f, height);
 	return height;
 }
 
 void main() {
 	worldHeight = computeTerrainHeight(vPosition);
-
-	float heightFactor = 0.3f;
-	float terrainHeightFactor = 0.2f;
+	
 	vec3 position = vPosition + u_height * heightFactor * vNormal;
 	position += worldHeight * terrainHeightFactor * vNormal;
 	gl_Position =  u_projMat * u_viewMat * u_modelMat * vec4(position, 1.0);

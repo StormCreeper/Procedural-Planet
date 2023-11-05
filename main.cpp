@@ -6,6 +6,10 @@
 #include "object3d.hpp"
 #include "texture.hpp"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include "gl_includes.hpp"
 
 #include <cmath>
@@ -96,6 +100,18 @@ void initGLFW() {
     glfwSetScrollCallback(g_window, scrollCallback);
 }
 
+void initImGui() {
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(g_window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplOpenGL3_Init();
+}
+
 void initOpenGL() {
     // Load extensions for modern OpenGL
     if (!gladLoadGL(glfwGetProcAddress)) {
@@ -122,7 +138,7 @@ void initGPUprogram() {
 void initCPUgeometry() {
     std::shared_ptr<Texture> texture = std::make_shared<Texture>();
     //g_mesh = std::make_shared<Object3D>(Mesh::genPlane(), texture);
-    g_mesh = std::make_shared<Object3D>(Mesh::genSphere(64), texture);
+    g_mesh = std::make_shared<Object3D>(Mesh::genSphere(100), texture);
 }
 
 void initCamera() {
@@ -144,6 +160,8 @@ void init() {
     initCPUgeometry();
     initGPUprogram();
     initCamera();
+    
+    initImGui();
 }
 
 void clear() {
@@ -151,10 +169,139 @@ void clear() {
 
     glfwDestroyWindow(g_window);
     glfwTerminate();
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+}
+
+struct TexturingParams {
+    glm::vec3 groundColor;
+    glm::vec3 sandColor;
+    glm::vec3 waterColor;
+
+    glm::vec3 treeColor;
+    glm::vec3 trunkColor;
+    glm::vec3 grassColor;
+
+    int treeDensity;
+    int grassDensity;
+};
+
+struct GenerationParams {
+	float heightFactor;
+	float terrainHeightFactor;
+
+	int nOctaves;
+	float terrainScale;
+	float terrainHeightOffset;
+};
+
+struct GlobalParams {
+    int nbShells;
+    TexturingParams texturingParams;
+    GenerationParams generationParams;
+};
+
+GlobalParams g_globalParams = {
+    128,
+    {
+        glm::vec3(0.6f, 0.75f, 0.15f),
+        glm::vec3(0.9f, 0.8f, 0.2f),
+        glm::vec3(0.0f, 0.0f, 1.0f),
+
+        glm::vec3(0.2f, 0.7f, 0.1f),
+        glm::vec3(0.5f, 0.3f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+
+        100,
+        2000
+    },
+    {
+        0.3f,
+        0.2f,
+        8,
+        1.0f,
+        0.1f
+    }
+};
+
+void renderUI() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // Start drawing here 
+
+    ImGui::Begin("Parameters", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    ImGui::SliderInt("Number of shells", &g_globalParams.nbShells, 8, 256);
+
+    ImGui::LabelText("Texturing parameters", "");
+
+    ImGui::ColorEdit3("Ground color", &g_globalParams.texturingParams.groundColor[0]);
+    ImGui::ColorEdit3("Sand color", &g_globalParams.texturingParams.sandColor[0]);
+    ImGui::ColorEdit3("Water color", &g_globalParams.texturingParams.waterColor[0]);
+    
+    ImGui::NewLine();
+
+    ImGui::ColorEdit3("Tree color", &g_globalParams.texturingParams.treeColor[0]);
+    ImGui::ColorEdit3("Trunk color", &g_globalParams.texturingParams.trunkColor[0]);
+    ImGui::ColorEdit3("Grass color", &g_globalParams.texturingParams.grassColor[0]);
+    
+    ImGui::NewLine();
+
+    ImGui::SliderInt("Tree density", &g_globalParams.texturingParams.treeDensity, 1, 500);
+    ImGui::SliderInt("Grass density", &g_globalParams.texturingParams.grassDensity, 1, 5000);
+
+    ImGui::End();
+
+    ImGui::Begin("Generation parameters", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    ImGui::SliderFloat("Height factor", &g_globalParams.generationParams.heightFactor, 0.0f, 1.0f);
+    ImGui::SliderFloat("Terrain height factor", &g_globalParams.generationParams.terrainHeightFactor, 0.0f, 1.0f);
+
+    ImGui::SliderInt("Number of octaves", &g_globalParams.generationParams.nOctaves, 1, 16);
+    ImGui::SliderFloat("Terrain scale", &g_globalParams.generationParams.terrainScale, 0.0f, 10.0f);
+    ImGui::SliderFloat("Terrain height offset", &g_globalParams.generationParams.terrainHeightOffset, 0.0f, 10.0f);
+
+    ImGui::End();
+
+    // End drawing here
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void setParamsUniforms() {
+
+    // Texturing params
+
+    setUniform(g_program, "u_texturingParams.groundColor", g_globalParams.texturingParams.groundColor);
+    setUniform(g_program, "u_texturingParams.sandColor", g_globalParams.texturingParams.sandColor);
+    setUniform(g_program, "u_texturingParams.waterColor", g_globalParams.texturingParams.waterColor);
+
+    setUniform(g_program, "u_texturingParams.treeColor", g_globalParams.texturingParams.treeColor);
+    setUniform(g_program, "u_texturingParams.trunkColor", g_globalParams.texturingParams.trunkColor);
+    setUniform(g_program, "u_texturingParams.grassColor", g_globalParams.texturingParams.grassColor);
+
+    setUniform(g_program, "u_texturingParams.treeDensity", g_globalParams.texturingParams.treeDensity);
+    setUniform(g_program, "u_texturingParams.grassDensity", g_globalParams.texturingParams.grassDensity);
+
+    // Generation params
+
+    setUniform(g_program, "u_generationParams.heightFactor", g_globalParams.generationParams.heightFactor);
+    setUniform(g_program, "u_generationParams.terrainHeightFactor", g_globalParams.generationParams.terrainHeightFactor);
+
+    setUniform(g_program, "u_generationParams.nOctaves", g_globalParams.generationParams.nOctaves);
+    setUniform(g_program, "u_generationParams.terrainScale", g_globalParams.generationParams.terrainScale);
+    setUniform(g_program, "u_generationParams.terrainHeightOffset", g_globalParams.generationParams.terrainHeightOffset);
 }
 
 // The main rendering call
 void render() {
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  // Erase the color and z buffers.
 
     const glm::mat4 viewMatrix = g_camera.computeViewMatrix();
@@ -171,16 +318,17 @@ void render() {
 
     setUniform(g_program, "u_time", static_cast<float>(glfwGetTime()));
 
+    setParamsUniforms();
+
     // Render objects
 
-    int nbShells = 128;
-    float heightMax = 1.0f;
-
-    for (int i = 0; i < nbShells; i++) {
-        float height = heightMax * (float)i / (float)(nbShells-1);
+    for (int i = g_globalParams.nbShells - 1; i >= 0; i--) {
+        float height = (float)i / (float)(g_globalParams.nbShells-1);
         setUniform(g_program, "u_height", height);
         g_mesh->render(g_program);
     }
+
+    renderUI();
 }
 
 // Update any accessible variable based on the current time
