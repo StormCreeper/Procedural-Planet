@@ -9,14 +9,12 @@
 #define OBJECT_3D_H
 
 #include "mesh.hpp"
-#include "texture.hpp"
 
 class Object3D {
 public:
     Object3D() {}
-    Object3D(std::shared_ptr<Mesh> mesh, std::shared_ptr<Texture> texture) {
+    Object3D(std::shared_ptr<Mesh> mesh) {
         this->mesh = mesh;
-        this->texture = texture;
     }
 
     void render(GLuint program) const;
@@ -30,7 +28,6 @@ public:
 
 private:
     std::shared_ptr<Mesh> mesh {};
-    std::shared_ptr<Texture> texture {};
     glm::mat4 modelMatrix = glm::mat4(1.0f);
 };
 

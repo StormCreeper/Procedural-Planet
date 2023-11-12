@@ -4,7 +4,6 @@
 #include "camera.hpp"
 #include "shader.hpp"
 #include "object3d.hpp"
-#include "texture.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -28,7 +27,9 @@ GLuint g_program {};  // A GPU program contains at least a vertex shader and a f
 
 Camera g_camera {};
 
-std::shared_ptr<Object3D> g_mesh {};
+std::shared_ptr<Mesh> g_mesh {};
+
+float g_fps = 0.0f;
 
 // Executed each time the window is resized. Adjust the aspect ratio and the rendering viewport to the current window.
 void windowSizeCallback(GLFWwindow *window, int width, int height) {
@@ -114,17 +115,21 @@ void initImGui() {
 
 void initOpenGL() {
     // Load extensions for modern OpenGL
-    if (!gladLoadGL(glfwGetProcAddress)) {
+    if (!gladLoadGL()) {
         std::cerr << "ERROR: Failed to initialize OpenGL context" << std::endl;
         glfwTerminate();
         std::exit(EXIT_FAILURE);
     }
 
+    glEnable(GL_DEBUG_OUTPUT);
     glCullFace(GL_BACK);                   // Specifies the faces to cull (here the ones pointing away from the camera)
     glEnable(GL_CULL_FACE);                // Enables face culling (based on the orientation defined by the CW/CCW enumeration).
     glDepthFunc(GL_LESS);                  // Specify the depth test for the z-buffer
     glEnable(GL_DEPTH_TEST);               // Enable the z-buffer test in the rasterization
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);  // specify the background color, used any time the framebuffer is cleared
+
+    // Disable v-sync
+    // glfwSwapInterval(0);
 }
 
 void initGPUprogram() {
@@ -132,13 +137,15 @@ void initGPUprogram() {
     loadShader(g_program, GL_VERTEX_SHADER, "resources/vertexShader.glsl");
     loadShader(g_program, GL_FRAGMENT_SHADER, "resources/fragmentShader.glsl");
     glLinkProgram(g_program);  // The main GPU program is ready to be handle streams of polygons
+
+    glUseProgram(g_program);
 }
 
 
 void initCPUgeometry() {
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    //g_mesh = std::make_shared<Object3D>(Mesh::genPlane(), texture);
-    g_mesh = std::make_shared<Object3D>(Mesh::genSphere(100), texture);
+    //g_mesh = std::make_shared<Object3D>(Mesh::genPlane());
+    g_mesh = Mesh::genSphere(100);
+    glBindVertexArray(g_mesh->m_vao);  
 }
 
 void initCamera() {
@@ -268,6 +275,12 @@ void renderUI() {
 
     ImGui::End();
 
+    ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    ImGui::Text("FPS: %.1f", g_fps);
+
+    ImGui::End();
+
     // End drawing here
 
     ImGui::Render();
@@ -306,15 +319,15 @@ void render() {
 
     const glm::mat4 viewMatrix = g_camera.computeViewMatrix();
     const glm::mat4 projMatrix = g_camera.computeProjectionMatrix();
-
-    glUseProgram(g_program);
     
     setUniform(g_program, "u_viewMat", viewMatrix);
     setUniform(g_program, "u_projMat", projMatrix);
+    setUniform(g_program, "u_proj_viewMat", projMatrix * viewMatrix);
+
+    setUniform(g_program, "u_modelMat", glm::mat4(1.0f));
+    setUniform(g_program, "u_transposeInverseModelMat", glm::mat4(1.0f));
 
     setUniform(g_program, "u_cameraPosition", g_camera.getPosition());
-
-    setUniform(g_program, "u_texture", 0);
 
     setUniform(g_program, "u_time", static_cast<float>(glfwGetTime()));
 
@@ -325,7 +338,7 @@ void render() {
     for (int i = g_globalParams.nbShells - 1; i >= 0; i--) {
         float height = (float)i / (float)(g_globalParams.nbShells-1);
         setUniform(g_program, "u_height", height);
-        g_mesh->render(g_program);
+        glDrawElements(GL_TRIANGLES, g_mesh->m_numIndices, GL_UNSIGNED_INT, 0);
     }
 
     renderUI();
@@ -333,6 +346,19 @@ void render() {
 
 // Update any accessible variable based on the current time
 void update(const float currentTimeInSec) {
+
+    // Update the FPS computation
+    static int frameCount = 0;
+    static float lastTime = glfwGetTime();
+    frameCount++;
+
+    if (currentTimeInSec - lastTime >= 1.0) {
+        g_fps = static_cast<float>(frameCount) / (currentTimeInSec - lastTime);
+        frameCount = 0;
+        lastTime = currentTimeInSec;
+    }
+
+    // Update the camera position
 
     glm::vec3 targetPosition = glm::vec3(0.05f, 0.05f, 0.0f);
     g_camera.setTarget(targetPosition);

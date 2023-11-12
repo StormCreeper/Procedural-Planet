@@ -89,8 +89,6 @@ in float worldHeight;
 
 uniform vec3 u_cameraPosition;
 
-uniform sampler2D u_texture;
-
 uniform float u_height;
 
 uniform float u_time;
@@ -207,14 +205,9 @@ void getTreeMaterial(inout Material material) {
 	if(u_height > truncHeight) {
 		radius = sin((u_height - truncHeight) / (treeHeight - truncHeight)  * 3.1415f);
 	}
-	if(dist < radius && u_height < treeHeight) {
-		material.filled = true;
-
-		material.color = trunkColor * u_height;
-		if(u_height > truncHeight) {
-			material.color = treeColor * u_height;
-		}
-	}
+	
+	material.filled = material.filled || ( dist < radius && u_height < treeHeight);
+	material.color = (u_height > truncHeight ? treeColor : trunkColor) * u_height;
 }
 
 float grassHeightFactor = 1.0f / 5.0f;

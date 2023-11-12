@@ -25,14 +25,15 @@ public:
 
     ~Mesh();
     
-private:
     GLuint m_vao = 0;
+
+    size_t m_numIndices = 0;
+    
+private:
     GLuint m_posVbo = 0;
     GLuint m_normalVbo = 0;
     GLuint m_uvVbo = 0;
     GLuint m_ibo = 0;
-
-    size_t m_numIndices = 0;
 
     static void genFace(std::vector<float>& vertexPositions, std::vector<float>& vertexNormals, std::vector<float> &vertexUVs, std::vector<unsigned int>& triangleIndices, const size_t resolution, const glm::vec3& dir1, const glm::vec3& dir2);
 };

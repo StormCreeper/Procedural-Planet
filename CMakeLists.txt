@@ -34,14 +34,12 @@ set(SOURCES
   mesh.cpp
   shader.cpp
   object3d.cpp
-  texture.cpp
 
   camera.hpp
   mesh.hpp
   shader.hpp
   gl_includes.hpp
   object3d.hpp
-  texture.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

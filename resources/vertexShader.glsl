@@ -82,6 +82,8 @@ layout(location=1) in vec3 vNormal;
 layout(location=2) in vec2 vUV;
 
 uniform mat4 u_viewMat, u_projMat, u_modelMat;
+uniform mat4 u_proj_viewMat;
+uniform mat4 u_transposeInverseModelMat;
 
 uniform float u_height;
 
@@ -134,12 +136,12 @@ void main() {
 	
 	vec3 position = vPosition + u_height * heightFactor * vNormal;
 	position += worldHeight * terrainHeightFactor * vNormal;
-	gl_Position =  u_projMat * u_viewMat * u_modelMat * vec4(position, 1.0);
+	gl_Position =  u_proj_viewMat * u_modelMat * vec4(position, 1.0);
 	
 	vec4 worldPos_Homo = u_modelMat * vec4(vPosition, 1.0);
 	worldPos = worldPos_Homo.xyz / worldPos_Homo.w;
 
-	vec4 normal_Homo = transpose(inverse(u_modelMat)) * vec4(vNormal, 1.0);
+	vec4 normal_Homo = u_transposeInverseModelMat * vec4(vNormal, 1.0);
 	vertexNormal = normalize(normal_Homo.xyz);
 
 	textureUV = vUV;
